@@ -1,0 +1,95 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Sep  7 10:04:24 2021
+
+@author: JJ11224
+"""
+
+'''
+This script will not run using the built in laspy from ArcPro. The laspy found
+in the following location needs to be pasted into the following location
+after the ArcPro laspy has been deleted.
+
+Correct laspy file: F:\_tools\laspy-2.0.2\laspy
+Where to paste in laspy: C:\Users\JJ11224\AppData\Local\ESRI\conda\envs\arcgispro-py3-clone2\Lib\site-packages
+
+'''
+import os
+import sys
+import laspy
+import arcpy
+import glob
+
+#Check out 3D analyst license
+class LicenseError(Exception):
+    pass
+
+try:
+    if arcpy.CheckExtension("3D") == "Available":
+        arcpy.CheckOutExtension("3D")
+    else:
+        # raise a custom exception
+        raise LicenseError
+        
+except LicenseError:
+    print("3D Analyst license is unavailable")       
+
+#set variables
+
+#this is an las dataset
+in_lasd = r"C:\LidarServe\testing\python\input\inputLASD.lasd"
+
+#this is a folder location in which the output las tiles will go
+target_folder = r"C:\LidarServe\testing\python\output"
+
+#this is the aoi boundary and should be a shapefile
+boundary = r"C:\LidarServe\testing\TEST.shp"
+
+#this is where the output las dataset and las file will go. It should have the suffix .las
+out_lasd = output_las = r"C:\LidarServe\testing\python\output\allthepoints.las"
+
+#run Extract Las Tool
+try:
+    arcpy.ddd.ExtractLas(in_lasd, target_folder,'', boundary,'PROCESS_ENTIRE_FILES','_subset', 'REMOVE_VLR', 'REARRANGE_POINTS', 'COMPUTE_STATS', out_lasd, 'SAME_AS_INPUT')
+    print ("Extract las complete")
+    
+except:
+    print (arcpy.GetMessages())
+
+#get list of las files
+lasFiles = glob.glob(os.path.join(target_folder, '*.las'))  
+    
+#define in las files
+input_las = lasFiles[0]
+
+#create las file to append
+try:
+    las = laspy.read(input_las)
+    out = las.write(output_las)
+    print(out)
+    
+except:
+    print('Error in copy las')
+    
+    
+#define inlas files
+in_las = lasFiles[1:]
+
+#append las files
+try:
+    print('Running Append LAS')
+    with laspy.open(output_las, mode='a') as outlas:
+        for tile in in_las:
+            with laspy.open(tile) as inlas:
+                for points in inlas.chunk_iterator(2_000_000):
+                #append las files to lasFile[0]
+                    outlas.append_points(points)
+    print('Process finished without errors') 
+                   
+except:
+    tb = sys.exc_info()[2]
+    tbinfo = traceback.format_tb(tb)[0]
+    print('Error in append las')
+    print ("PYTHON ERRORS:\nTraceback info:\n" + tbinfo + "\nError     Info:\n" + str(sys.exc_info()[1]))
+    
+

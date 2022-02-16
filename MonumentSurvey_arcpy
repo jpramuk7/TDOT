@@ -1,0 +1,135 @@
+import csv
+import arcpy
+
+spreadsheet = "C:\\Monument_Surveyors\\ControlPointInformation_Test_oldconfiguration.csv"
+fc = r"C:\Monument_Surveyors\Monuments\Monuments_copying.gdb\Monuments_STAGE_editing_SPCS"
+
+inputEPSG = 2274
+outputEPSG = 4326
+
+try:
+    with open(spreadsheet, "r") as monument_sheet:
+        csvReader = csv.reader(monument_sheet)
+        header = next(csvReader)
+        
+        latIndex = header.index("Latitude:")
+        longIndex = header.index("Longitude")
+        elevIndex = header.index("Elev.:")
+        pointNameIndex = header.index("Point Name:")
+        latitudeIndex = header.index("Latitude:")
+        longitudeIndex = header.index("Longitude")
+        northIndex = header.index("North:")
+        eastIndex = header.index("East:")
+        elevationIndex = header.index("Elev.:")
+        daIndex = header.index("D.A. Factor:")
+        horizDatumIndex = header.index("Horz. Datum")
+        vertDatumIndex = header.index("Vert. Datum:")
+        geoidIndex = header.index("Geoid")
+        countyIndex = header.index("County:")
+        yearIndex = header.index("Year:")
+        vertOrderIndex = header.index("Vertical order:")
+        referenceIndex = header.index("Reference")
+        monTypeIndex = header.index("Type of monument:")
+        chiefIndex = header.index("Chief of Party:")
+        descIndex = header.index("Described By:")
+        fileIndex = header.index("Project Filename")
+        
+        arcpy.AddMessage("Spreadsheet Headers successfully identified.")
+        
+        coords = []
+        pointname = []
+        latitude = []
+        longitude = []
+        northing = []
+        easting = []
+        elevation = []
+        dafactor = []
+        horizdatum = []
+        vertdatum = []
+        geoid = []
+        county = []
+        year = []
+        vertorder = []
+        reference = []
+        montype = []
+        chief = []
+        description = []
+        filename = []
+        
+        for row in csvReader:
+            lat = float(row[latIndex])
+            long = float(row[longIndex])
+            elev = float(row[elevIndex])
+            aname = str(row[pointNameIndex])
+            alatitude = float(row[latitudeIndex])
+            alongitude = float(row[longitudeIndex])
+            anorthing = float(row[northIndex])
+            aeasting = float(row[eastIndex])
+            aelevation = float(row[elevationIndex])
+            ada = float(row[daIndex])
+            ahorizdatum = str(row[horizDatumIndex])
+            avertdatum = str(row[vertDatumIndex])
+            ageoid = str(row[geoidIndex])
+            acounty = str(row[countyIndex])
+            ayear = int(row[yearIndex])
+            avertorder = str(row[vertOrderIndex])
+            areference = str(row[referenceIndex])
+            amontype = str(row[monTypeIndex])
+            achief = str(row[chiefIndex])
+            adescription = str(row[descIndex])
+            afilename = str(row[fileIndex])
+            
+            coords.append([long, lat, elev])
+            pointname.append(aname)
+            latitude.append(alatitude)
+            longitude.append(alongitude)
+            northing.append(anorthing)
+            easting.append(aeasting)
+            elevation.append(aelevation)
+            dafactor.append(ada)
+            horizdatum.append(ahorizdatum)
+            vertdatum.append(avertdatum)
+            geoid.append(ageoid)
+            county.append(acounty)
+            year.append(ayear)
+            vertorder.append(avertorder)
+            reference.append(areference)
+            montype.append(amontype)
+            chief.append(achief)
+            description.append(adescription)
+            filename.append(afilename)
+        
+            arcpy.AddMessage("Data captured successfully using Header information.")
+            
+        coordsFloat = []
+        for coord in coords:
+            for i in coord:
+                coordsFloat.append(float(i))
+        xypoints = ([coordsFloat[x:x+3] for x in range (0, len(coordsFloat), 3)])
+        
+        atts = [[xypoints[i], pointname[i], latitude[i], longitude[i], northing[i],
+                easting[i], elevation[i], dafactor[i], horizdatum[i], vertdatum[i],
+                geoid[i], county[i], year[i], vertorder[i], reference[i],
+                montype[i], chief[i], description[i], filename[i]] for i in range(len(xypoints))]
+        
+        fieldsToUpdate = ("SHAPE@", "POINTNAME", "DD_LATITUDE", "DD_LONGITUDE",
+                          "NORTHING", "EASTING", "ELEVATION", "DA_FACTOR", 
+                          "HORZ_DATUM", "VERT_DATUM", "GEOID", "COUNTY", "YEAR_SET",
+                          "VERTICAL_ORDER", "REFERENCE", "MONUMENT_TYPE", "PARTY_CHIEF",
+                          "DESCRIBER", "FILENAME")
+        
+        with arcpy.da.InsertCursor(fc, fieldsToUpdate) as cur:
+            for i in atts:
+                cur.insertRow(i)
+        print("feature created")
+        arcpy.AddMessage("Data transfer completed successfully.")
+    
+except Exception as e:
+    print(e)
+    print(arcpy.GetMessages())
+    print("feature not created")
+    arcpy.AddMessage("This script tool failed to run successfully.")
+    
+
+finally:
+    del cur

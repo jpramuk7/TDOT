@@ -1,0 +1,199 @@
+import arcpy
+import ogr, osr
+import math
+
+#feature class being updated
+fc = arcpy.GetParameterAsText(0)
+
+#Project XY from WGS to SPCS
+pointX = float(arcpy.GetParameterAsText(1))
+pointY = float(arcpy.GetParameterAsText(2))
+
+# Spatial Reference System
+inputEPSG = 4326
+outputEPSG = 2274
+
+# create a geometry from coordinates
+point = ogr.Geometry(ogr.wkbPoint)
+point.AddPoint(pointX, pointY)
+
+# create coordinate transformation
+inSpatialRef = osr.SpatialReference()
+inSpatialRef.ImportFromEPSG(inputEPSG)
+
+outSpatialRef = osr.SpatialReference()
+outSpatialRef.ImportFromEPSG(outputEPSG)
+
+coordTransform = osr.CoordinateTransformation(inSpatialRef, outSpatialRef)
+
+# transform point
+point.Transform(coordTransform)
+
+# print point in EPSG 2274
+print (point.GetX(), point.GetY())
+
+#user input values
+inX = attDDLong = point.GetX()
+inY = attDDLat = point.GetY()
+inZ = attElevation = float(arcpy.GetParameterAsText(3))
+
+#
+#Calculate DMS Latitidue from DD Latitude
+#
+#
+#
+
+#create Truncate definition for calcluating DMS Latitude
+def truncate(number, decimals=0):
+    """
+    Returns a value truncated to a specific number of decimal places.
+    """
+    if not isinstance(decimals, int):
+        raise TypeError("decimal places must be an integer.")
+    elif decimals < 0:
+        raise ValueError("decimal places has to be 0 or more.")
+    elif decimals == 0:
+        return math.trunc(number)
+
+    factor = 10.0 ** decimals
+    return math.trunc(number * factor) / factor
+
+#Longitude
+#user input
+longDD = pointX
+
+#convert string to float
+longDD_flt = abs(longDD)
+
+#calculonge degrees
+longDegrees = int(longDD_flt)
+longDegrees_str = str(longDegrees)
+
+#calculonge minutes
+longMinutes_raw = longDD_flt % 1
+longMinutes = math.trunc(float(longMinutes_raw * 60))
+longMinutes_fixed = "%02d" % (longMinutes)
+longMinutes_str = str(longMinutes_fixed)
+
+#calculonge seconds
+longSeconds_raw = ((longMinutes_raw * 60) % 1) * 60 #float
+longSeconds = truncate (longSeconds_raw, 4) #float
+longSeconds_all_dec = longSeconds % 1 #float
+longSeconds_dec = truncate (longSeconds_all_dec, 4) #float
+longSeconds_fixed = "%02d" % (longSeconds_raw) #string
+
+if int(longSeconds_fixed) < 10:
+    longSeconds_combined = longSeconds_fixed + (str(longSeconds_dec)[1:]) #string
+    longSeconds_str = longSeconds_combined
+else:
+    longSeconds_combined = float(longSeconds_fixed) + longSeconds_dec
+    longSeconds_str = str(longSeconds_combined)
+
+#calculate output
+longDMS = "-" + longDegrees_str + longMinutes_str + longSeconds_str
+
+
+#Latitude
+#user input
+latDD = pointY
+
+#convert string to float
+latDD_flt = abs(latDD)
+
+#calculate degrees
+latDegrees = int(latDD_flt)
+latDegrees_str = str(latDegrees)
+
+#calculate minutes
+latMinutes_raw = latDD_flt % 1
+latMinutes = math.trunc(float(latMinutes_raw * 60))
+latMinutes_fixed = "%02d" % (latMinutes)
+latMinutes_str = str(latMinutes_fixed)
+
+#calculate seconds
+latSeconds_raw = ((latMinutes_raw * 60) % 1) * 60 #float
+latSeconds = truncate (latSeconds_raw, 4) #float
+latSeconds_all_dec = latSeconds % 1 #float
+latSeconds_dec = truncate (latSeconds_all_dec, 4) #float
+latSeconds_fixed = "%02d" % (latSeconds_raw) #string
+
+if int(latSeconds_fixed) < 10:
+    latSeconds_combined = latSeconds_fixed + (str(latSeconds_dec)[1:]) #string
+    latSeconds_str = latSeconds_combined
+else:
+    latSeconds_combined = float(latSeconds_fixed) + latSeconds_dec
+    latSeconds_str = str(latSeconds_combined)
+
+#calculate output
+latDMS = latDegrees_str + latMinutes_str + latSeconds_str
+
+
+#more user input coded values
+attCounty = arcpy.GetParameterAsText(4)
+attFileName = arcpy.GetParameterAsText(5)
+attPointName = arcpy.GetParameterAsText(6)
+attYearSet = int(arcpy.GetParameterAsText(7))
+attDAFactor = float(arcpy.GetParameterAsText(8))
+attNorthing = float(arcpy.GetParameterAsText(9))
+attEasting = float(arcpy.GetParameterAsText(10))
+attVerticalOrder = arcpy.GetParameterAsText(11)
+attHorizontalDatum = arcpy.GetParameterAsText(12)
+attVerticalDatum = arcpy.GetParameterAsText(13)
+attScaleFactor = arcpy.GetParameterAsText(14)
+attPartyChief = arcpy.GetParameterAsText(15)
+attDescriber = arcpy.GetParameterAsText(16)
+attBacksight1 = arcpy.GetParameterAsText(17)
+attBacksight1Dist = arcpy.GetParameterAsText(18)
+attBacksight1Bear = arcpy.GetParameterAsText(19)
+attBacksight2 = arcpy.GetParameterAsText(20)
+attBacksight2Dist = arcpy.GetParameterAsText(21)
+attBacksight2Bear = arcpy.GetParameterAsText(22)
+attMonumentType = arcpy.GetParameterAsText(23)
+attToReach = arcpy.GetParameterAsText(24)
+attReference = arcpy.GetParameterAsText(25)
+attGeoid = arcpy.GetParameterAsText(26)
+attEllipsoidHeight = float(arcpy.GetParameterAsText(27))
+attGeoErrors = int(arcpy.GetParameterAsText(28))
+attErrorDesc = arcpy.GetParameterAsText(29)
+attDMSLat = latDMS
+attDMSLong = longDMS
+attOrthoHeight = float(arcpy.GetParameterAsText(30))
+attProjectName = arcpy.GetParameterAsText(31)
+attRouteDesc = arcpy.GetParameterAsText(32)
+
+
+#fields to update
+fieldsToUpdate = ("SHAPE@XY","COUNTY","FILENAME","POINTNAME","YEAR_SET", 
+                  "DA_FACTOR","NORTHING","EASTING","ELEVATION","VERTICAL_ORDER",
+                  "HORZ_DATUM","VERT_DATUM", "SCALE_FACTOR","PARTY_CHIEF",
+                  "DESCRIBER","BACKSIGHT1", "BACKSIGHT1DISTANCE","BACKSIGHT1BEARING",
+                  "BACKSIGHT2","BACKSIGHT2DISTANCE","BACKSIGHT2BEARING",
+                  "MONUMENT_TYPE", "TO_REACH", "REFERENCE", "GEOID", "ELLIPSOID_HT",
+                  "GEOM_ERRORS", "ERROR_DESC", "DD_LATITUDE", "DD_LONGITUDE",
+                  "DMS_LATITUDE", "DMS_LONGITUDE", "ORTHOMETRIC_HT", "PROJECT_NAME",
+                  "ROUTE_DESCRIPTION")
+
+try:
+    # Create the insert cursor
+    with arcpy.da.InsertCursor(fc, fieldsToUpdate) as cursor:
+        # Insert the row providing a tuple of affected attributes
+        cursor.insertRow(((inX,inY, float(inZ)), attCounty, attFileName, 
+                          attPointName, attYearSet, (float(attDAFactor)), 
+                          (float(attNorthing)), (float(attEasting)), (float(attElevation)),
+                          attVerticalOrder, attHorizontalDatum, attVerticalDatum,
+                          attScaleFactor, attPartyChief, attDescriber, attBacksight1,
+                          attBacksight1Dist, attBacksight1Bear, attBacksight2,
+                          attBacksight2Dist, attBacksight2Bear, attMonumentType,
+                          attToReach, attReference, attGeoid, (float(attEllipsoidHeight)),
+                          (int(attGeoErrors)), attErrorDesc, pointY,
+                          pointX, attDMSLat, attDMSLong, 
+                          (float(attOrthoHeight)), attProjectName, attRouteDesc))
+    
+    print ("feature created")
+    
+except:
+    print(arcpy.GetMessages())
+    print ("feature not created")
+
+finally:
+    del cursor
